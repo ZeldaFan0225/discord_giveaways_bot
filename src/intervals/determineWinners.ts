@@ -9,9 +9,9 @@ export async function determineWinner(sql: pg.Client, client: GiveawayClient){
         let users = giveaway.users as string[]
         if(!users.length) {
             client.log(`Giveaway \`${giveaway.id}\` ended with no entries`)
-            await sql.query(`DELETE FROM giveaways WHERE id='${giveaway.id}'`)
             return
         }
+        await sql.query(`DELETE FROM giveaways WHERE id='${giveaway.id}'`)
         const winners = users.sort(() => Math.random() > 0.5 ? 1 : -1).splice(0, giveaway.winners)
         let channel = await client.channels.fetch(giveaway.channel_id).catch(() => null)
         let message: Message | undefined
@@ -24,27 +24,37 @@ export async function determineWinner(sql: pg.Client, client: GiveawayClient){
             message?.reply({content: `**Giveaway ended. Winners:**\n\n${winners.map(w => `<@${w}>`).join(", ")}`}).catch(() => null)
         }
 
-        let prizes = giveaway.prize
+        let prizes: string[] = giveaway.prize.slice()
         let dms_closed: string[] = []
         let newwinners: string[] = []
+        let oneprize = giveaway.prize.length !== giveaway.winners
 
         await Promise.all(winners.map(async w => {
-            let user = await client.users.fetch(w)
-            let prize = prizes.length !== giveaway.winners ? prizes[0] : prizes.splice(0, 1)
+            let user = await client.users.fetch(w).catch(() => null)
+            if(!user) return
+            let prize = oneprize ? prizes[0] : prizes.splice(0, 1)[0]
+            console.log(prize)
             let success = await user.send({content: `**Congratulations, you won in this giveaway:**\n${!channel ? "(original message deleted)" : `https://discord.com/channels/${process.env["GUILD_ID"]}/${giveaway.channel_id}/${giveaway.id}`}\n\nHere is your prize:\n${prize}`}).catch(() => null)
             if(!success) {
-                prizes.length !== giveaway.winners ? undefined : prizes.push(prize)
+                console.log(success)
+                oneprize ? undefined : prizes.unshift(prize)
                 dms_closed.push(user.id)
             } else newwinners.push(user.id)
         }))
 
-        if(prizes.length && giveaway.auto_reroll) {
-            while((prizes.length && (prizes.length !== giveaway.winners)) && users.length) {
-                let user = await client.users.fetch(users.splice(0, 1)[0])
-                let prize = prizes.length !== giveaway.winners ? prizes[0] : prizes.splice(0, 1)
+        
+        console.log(prizes)
+        console.log(winners)
+
+        if(giveaway.auto_reroll && users.length && (prizes.length && (oneprize ? newwinners.length < winners.length : true))) {
+            while(users.length && (prizes.length && (oneprize ? newwinners.length < winners.length : true))) {
+                console.log(prizes)
+                let user = await client.users.fetch(users.splice(0, 1)[0]).catch(() => null)
+                if(!user) return
+                let prize = oneprize ? prizes[0] : prizes.splice(0, 1)[0]
                 let success = await user.send({content: `**Congratulations, you won in this giveaway:**\n${!channel ? "(original message deleted)" : `https://discord.com/channels/${process.env["GUILD_ID"]}/${giveaway.channel_id}/${giveaway.id}`}\n\nHere is your prize:\n${prize}`}).catch(() => null)
                 if(!success) {
-                    prizes.length !== giveaway.winners ? undefined : prizes.push(prize)
+                    oneprize ? undefined : prizes.unshift(prize)
                     dms_closed.push(user.id)
                 } else newwinners.push(user.id)
             }
@@ -58,9 +68,9 @@ export async function determineWinner(sql: pg.Client, client: GiveawayClient){
                 {name: "**Prizes**", value: `${prizes.length}`, inline: true},
                 {name: "**Auto-Reroll**", value: `${giveaway.auto_reroll}`, inline: true},
                 {name: "**Entries**", value: `${users.length}`, inline: true},
-                {name: "**Members who had their dms closed**", value: `${dms_closed.map(w => `<@${w}> (\`${w}\`)`).join(", ")}`},
-                {name: "**Members who got prizes**", value: `${newwinners.map(w => `<@${w}> (\`${w}\`)`).join(", ")}`},
-                {name: "**Left over prizes**", value: `${prizes.join("\n")}`}
+                {name: "**Members who had their dms closed**", value: `${dms_closed.map(w => `<@${w}> (\`${w}\`)`).join(", ") || "none"}`},
+                {name: "**Members who got prizes**", value: `${newwinners.map(w => `<@${w}> (\`${w}\`)`).join(", ") || "none"}`},
+                {name: "**Left over prizes**", value: `${prizes.join("\n") || "none"}`}
             ])
 
             
@@ -83,8 +93,5 @@ export async function determineWinner(sql: pg.Client, client: GiveawayClient){
 
             client.log(result)
         }
-
-        await sql.query(`DELETE FROM giveaways WHERE id='${giveaway.id}'`)
-
     }
 }

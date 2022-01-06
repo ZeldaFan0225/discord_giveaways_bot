@@ -40,7 +40,8 @@ export default class Test extends Command {
                 {name: "**Ends**", value: `<t:${Math.floor((res.rows[0].duration)/1000)}:R>`, inline: true},
                 {name: "**Winners**", value: `${res.rows[0].winners}`, inline: true},
                 {name: "**Prizes**", value: `${res.rows[0].prize.length}`, inline: true},
-                {name: "**Auto-Reroll**", value: `${res.rows[0].auto_reroll}`, inline: true}
+                {name: "**Auto-Reroll**", value: `${res.rows[0].auto_reroll}`, inline: true},
+                {name: "**Participants**", value: `${ctx.client.giveawayCache.get(id)!.length}`, inline: true}
             ])
             
             ctx.reply({embeds: [embed], ephemeral: true})

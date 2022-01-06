@@ -76,7 +76,7 @@ export default class Test extends Command {
         .setTitle(`New Giveaway by ${host}`)
         .setDescription(`**Prize** ${description}\n**Winners** ${winners}\n**Ends** <t:${Math.floor((Date.now() + duration)/1000)}:R>\n\n**To claim your prize simply open your direct messages. The prize will be sent to you**`)
     
-        let id = await ctx.interaction.channel?.send({content: mention ? `<@&${mention}>` : undefined, embeds: [embed], components: button}).catch(() => null)
+        let id = await ctx.interaction.channel?.send({content: !mention ? undefined : mention === ctx.interaction.guildId ? "@everyone" : `<@&${mention}>`, embeds: [embed], components: button}).catch(() => null)
         if(!id) return ctx.error("Unable to start giveaway")
 
         let req = await ctx.sql.query(`INSERT INTO giveaways VALUES ('${id.id}', ${Date.now()+duration}, '{}', $1, ${winners}, ${`${auto_reroll}`.toUpperCase()}, ${id.channelId}) RETURNING id`, [`{${prizes.join(", ")}}`]).catch(console.error)
