@@ -10,6 +10,11 @@ const commandData: ApplicationCommandData = {
     name: "removeparticipant",
     description: "Removes a participant",
     options: [{
+        type: "STRING",
+        name: "message_id",
+        description: "The id of the giveaway message",
+        required: true
+    },{
         type: "USER",
         name: "user",
         description: "The user you want to remove",
@@ -26,12 +31,12 @@ export default class Test extends Command {
         this.description = `Removes a participant`
     }
     async run(ctx: CommandContext): Promise<any> {
-        let id = ctx.arguments.get("message_id")?.value
-        await ctx.sql.query(`UPDATE giveaways SET duration=${Date.now()-1} WHERE id='${id}' RETURNING *`)
-        ctx.reply({content: "Ending giveaway..."})
-        await syncDB(ctx.sql, ctx.client)
-        await determineWinner(ctx.sql, ctx.client)
+        let user_id = ctx.arguments.get("user")?.value?.toString() ?? ""
+        let id = ctx.arguments.get("message_id")?.value?.toString() ?? ""
+        ctx.client.giveawayCache.set(id, ctx.client.giveawayCache.get(id)!.filter(u => u !== user_id))
+        syncDB(ctx.sql, ctx.client)
 
-        ctx.log(`${ctx.interaction.member?.user.username}#${ctx.interaction.member?.user.discriminator} ended the giveaway \`${id}\``)
+        ctx.reply({content: `Removed the user <@${user_id}> (\`${user_id}\`) from the giveaway \`${id}\``})
+        ctx.log(`${ctx.interaction.member?.user.username}#${ctx.interaction.member?.user.discriminator} removed the participant <@${user_id}> (\`${user_id}\`) from the giveaway \`${id}\``)
     }
 }
