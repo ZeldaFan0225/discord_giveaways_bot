@@ -46,7 +46,9 @@ export async function determineWinner(sql: pg.Client, client: GiveawayClient){
         console.log(prizes)
         console.log(winners)
 
-        if(giveaway.auto_reroll && users.length && (prizes.length && (oneprize ? newwinners.length < winners.length : true))) {
+        if(newwinners.length === winners.length) prizes = []
+
+        if(giveaway.auto_reroll && users.length && prizes.length) {
             while(users.length && (prizes.length && (oneprize ? newwinners.length < winners.length : true))) {
                 console.log(prizes)
                 let user = await client.users.fetch(users.splice(0, 1)[0]).catch(() => null)
