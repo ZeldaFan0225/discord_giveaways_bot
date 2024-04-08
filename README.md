@@ -1,4 +1,7 @@
 # giveaways
+
+**This repository was archived and it is not recommended to use this any more as many libraries are outdated and the code is not actively maintained any more.**
+
 A giveaway bot for high loads
 
 ## What do do
